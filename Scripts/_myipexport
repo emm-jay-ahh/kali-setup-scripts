@@ -1,0 +1,9 @@
+#compdef myipexport
+
+_myipexport() {
+    local -a interfaces
+    interfaces=($(ip link show | awk -F': ' '{if (NR>1) print $2}' | awk '{print $1}'))
+    _describe 'network interfaces' interfaces
+}
+
+compdef _myipexport myipexport

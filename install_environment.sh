@@ -1,63 +1,48 @@
-#!/bin/bash
+#!/usr/bin/env zsh
 
-# Check if repository directory was provided as an argument
-if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <path_to_cloned_repo>"
-    exit 1
-fi
-
-REPO_DIR="$1/Scripts"  # Scripts directory within the cloned repo
+# Define the installation directory explicitly
 INSTALL_DIR="$HOME/Scripts"
 
 # Ensure the installation directory exists
-mkdir -p "$INSTALL_DIR"
+mkdir -p "$INSTALL_DIR" || {
+    echo "Failed to create installation directory: $INSTALL_DIR"
+    exit 1
+}
 
-# Copy scripts to the installation directory
-echo "Copying scripts to $INSTALL_DIR..."
-if [ -f "$REPO_DIR/set_ip.sh" ]; then
-    cp "$REPO_DIR/set_ip.sh" "$INSTALL_DIR/set_ip.sh"
-else
-    echo "Error: set_ip.sh does not exist in $REPO_DIR."
-fi
+# Assuming you are running this script from the directory where it resides
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )/Scripts"
 
-if [ -f "$REPO_DIR/set_ip_completion.sh" ]; then
-    cp "$REPO_DIR/set_ip_completion.sh" "$INSTALL_DIR/set_ip_completion.sh"
-else
-    echo "Error: set_ip_completion.sh does not exist in $REPO_DIR."
-fi
+# Copy all completion scripts to the installation directory
+echo "Copying completion scripts to $INSTALL_DIR..."
+for file in "$SCRIPT_DIR/_*" ; do
+    if [ -f "$file" ]; then
+        cp "$file" "$INSTALL_DIR" || {
+            echo "Failed to copy file: $file"
+            exit 1
+        }
+        echo "Copied $(basename $file) to $INSTALL_DIR"
+    else
+        echo "No completion scripts found in $SCRIPT_DIR."
+        exit 1
+    fi
+done
 
 # Make sure scripts are executable
-echo "Setting executable permissions for scripts..."
-chmod +x "$INSTALL_DIR/set_ip.sh"
-chmod +x "$INSTALL_DIR/set_ip_completion.sh"
+echo "Setting executable permissions for completion scripts..."
+chmod +x "$INSTALL_DIR"/_*
 
-# Update .zshrc to include new functions and source completion script
+# Update .zshrc to include new functions and source completion scripts
 echo "Updating Zsh profile..."
-# Check and add myipexport function if not exists
-if ! grep -Fxq "myipexport()" "$HOME/.zshrc"; then
-    cat <<EOF >> "$HOME/.zshrc"
-
-# Function to export IP
-myipexport() {
-    output=\$("$INSTALL_DIR/set_ip.sh" "\$1" 2>&1)
-    exit_status=\$?
-    if [ \$exit_status -ne 0 ]; then
-        echo "Error: \$output"
-    else
-        eval "\$output"
-        echo "Net Adaptor: \$1"
-        echo "IP Address: \$MYIP"
-    fi
-}
-EOF
-fi
-
-# Check and source the IP address completion script if not already sourced
-if ! grep -Fxq "source \"$INSTALL_DIR/set_ip_completion.sh\"" "$HOME/.zshrc"; then
-    echo "source \"$INSTALL_DIR/set_ip_completion.sh\"" >> "$HOME/.zshrc"
+# Setup Zsh completions if not already done
+if ! grep -Fxq "autoload -Uz compinit && compinit" "$HOME/.zshrc"; then
+    echo "fpath+=($INSTALL_DIR)" >> "$HOME/.zshrc"
+    echo "autoload -Uz compinit && compinit" >> "$HOME/.zshrc"
 fi
 
 # Apply changes
-source "$HOME/.zshrc"
+source "$HOME/.zshrc" || {
+    echo "Failed to source $HOME/.zshrc. Setup may not be complete."
+    exit 1
+}
 
 echo "Setup completed successfully."

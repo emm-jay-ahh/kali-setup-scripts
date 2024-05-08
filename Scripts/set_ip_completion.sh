@@ -14,5 +14,5 @@ _set_ip_completion() {
 }
 
 # Apply completion to both the script and the alias
-complete -F _set_ip_completion home/emmjay/.scripts/set_ip.sh
+complete -F _set_ip_completion $HOME/Scripts/set_ip.sh
 complete -F _set_ip_completion myipexport
